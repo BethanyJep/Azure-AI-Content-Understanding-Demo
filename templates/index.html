@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Upload Receipt for Analysis</h5>
+            </div>
+            <div class="card-body">
+                <form action="/" method="post" enctype="multipart/form-data" id="uploadForm">
+                    <div class="mb-3">
+                        <label for="receiptFile" class="form-label">Select receipt image or PDF:</label>
+                        <input class="form-control" type="file" id="receiptFile" name="file" accept="image/*,.pdf">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Analyze Receipt</button>
+                </form>
+                
+                <div class="loading" id="loadingIndicator">
+                    <div class="spinner-border loading-spinner text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Analyzing receipt... This may take up to a minute.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Sample Receipts</h5>
+            </div>
+            <div class="card-body">
+                <p>Or select a sample receipt to analyze:</p>
+                <div class="row" id="sampleReceipts">
+                    {% for receipt in sample_receipts %}
+                    <div class="col-md-3 mb-3">
+                        <div class="sample-receipt" data-receipt="{{ receipt }}">
+                            <div class="text-center">
+                                {% if receipt.endswith('.pdf') %}
+                                <div class="sample-receipt-icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-file-earmark-pdf text-danger mb-2" viewBox="0 0 16 16">
+                                        <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/>
+                                        <path d="M4.603 14.087a.8.8 0 0 1-.438-.42c-.195-.388-.13-.776.08-1.102.198-.307.526-.568.897-.787a7.7 7.7 0 0 1 1.482-.645 20 20 0 0 0 1.062-2.227 7.3 7.3 0 0 1-.43-1.295c-.086-.4-.119-.796-.046-1.136.075-.354.274-.672.65-.823.192-.077.4-.12.602-.077a.7.7 0 0 1 .477.365c.088.164.12.356.127.538.007.188-.012.396-.047.614-.084.51-.27 1.134-.52 1.794a11 11 0 0 0 .98 1.686 5.8 5.8 0 0 1 1.334.05c.364.066.734.195.96.465.12.144.193.32.2.518.007.192-.047.382-.138.563a1.04 1.04 0 0 1-.354.416.856.856 0 0 1-.51.138c-.331-.014-.654-.196-.933-.417a5.7 5.7 0 0 1-.911-.95 11.6 11.6 0 0 0-1.997.406 11.3 11.3 0 0 1-1.02 1.51c-.292.35-.609.656-.927.787a.8.8 0 0 1-.58.029zm1.379-1.901q-.25.115-.459.238c-.328.194-.541.383-.647.547-.094.145-.096.25-.04.361.01.022.02.036.03.044a.4.4 0 0 0 .14.016c.093-.001.181-.022.294-.086.223-.122.46-.345.697-.625.19-.226.376-.5.541-.814zm2.032-4.713c-.09.43-.203.837-.33 1.262.183-.534.291-1.036.33-1.262.4.013.4.029-.8.042.01-.462.003-.665-.009-.76-.01-.062-.027-.072-.05-.058zm4.349 3.763c-.013-.26-.08-.305-.255-.305-.079 0-.17.015-.272.046s-.224.076-.383.141c.253.157.407.312.529.463.05.064.098.128.14.19a.4.4 0 0 0 .122.096c.029.01.059.006.085-.012.03-.022.05-.06.053-.121a.6.6 0 0 0-.12-.207 1.1 1.1 0 0 0-.2-.23"/>
+                                    </svg>
+                                </div>
+                                {% else %}
+                                <div class="sample-receipt-preview">
+                                    <img src="{{ url_for('static', filename='samples/' + receipt) }}" alt="{{ receipt }}" class="img-fluid mb-2" style="max-height: 50px; max-width: 100px;">
+                                </div>
+                                {% endif %}
+                                <small>{{ receipt | replace('.pdf', '') | replace('-', ' ') | truncate(20, True) }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if receipt_url %}
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Analysis Results</h5>
+                <span class="badge bg-success">Azure AI</span>
+            </div>
+            <div class="alert alert-info m-3 mb-0">
+                <i class="bi bi-info-circle"></i> Results below are extracted using Azure Content Understanding API. The table shows key receipt information in a structured format.
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6>Receipt Image</h6>
+                        {% if receipt_url.endswith('.pdf') %}
+                            <div class="pdf-placeholder text-center p-4">
+                                <div>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="bi bi-file-earmark-pdf text-danger mb-3" viewBox="0 0 16 16">
+                                        <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/>
+                                        <path d="M4.603 14.087a.8.8 0 0 1-.438-.42c-.195-.388-.13-.776.08-1.102.198-.307.526-.568.897-.787a7.7 7.7 0 0 1 1.482-.645 20 20 0 0 0 1.062-2.227 7.3 7.3 0 0 1-.43-1.295c-.086-.4-.119-.796-.046-1.136.075-.354.274-.672.65-.823.192-.077.4-.12.602-.077a.7.7 0 0 1 .477.365c.088.164.12.356.127.538.007.188-.012.396-.047.614-.084.51-.27 1.134-.52 1.794a11 11 0 0 0 .98 1.686 5.8 5.8 0 0 1 1.334.05c.364.066.734.195.96.465.12.144.193.32.2.518.007.192-.047.382-.138.563a1.04 1.04 0 0 1-.354.416.856.856 0 0 1-.51.138c-.331-.014-.654-.196-.933-.417a5.7 5.7 0 0 1-.911-.95 11.6 11.6 0 0 0-1.997.406 11.3 11.3 0 0 1-1.02 1.51c-.292.35-.609.656-.927.787a.8.8 0 0 1-.58.029m1.379-1.901q-.25.115-.459.238c-.328.194-.541.383-.647.547-.094.145-.096.25-.04.361.01.022.02.036.03.044a.4.4 0 0 0 .14.016c.093-.001.181-.022.294-.086.223-.122.46-.345.697-.625.19-.226.376-.5.541-.814zm2.032-4.713c-.09.43-.203.837-.33 1.262.183-.534.291-1.036.33-1.262.4.013.4.029-.8.042.01-.462.003-.665-.009-.76-.01-.062-.027-.072-.05-.058zm4.349 3.763c-.013-.26-.08-.305-.255-.305-.079 0-.17.015-.272.046s-.224.076-.383.141c.253.157.407.312.529.463.05.064.098.128.14.19a.4.4 0 0 0 .122.096c.029.01.059.006.085-.012.03-.022.05-.06.053-.121a.6.6 0 0 0-.12-.207 1.1 1.1 0 0 0-.2-.23"/>
+                                    </svg>
+                                    <p>PDF Receipt</p>
+                                    <a href="/pdf/{{ receipt_url.split('/')[-1] }}" target="_blank" class="btn btn-sm btn-primary">View PDF</a>
+                                </div>
+                            </div>
+                        {% else %}
+                            <img src="{{ receipt_url }}" alt="Receipt" class="img-fluid receipt-preview">
+                        {% endif %}
+                    </div>
+                    <div class="col-md-8">
+                        <h6>Extracted Data</h6>
+                        <ul class="nav nav-tabs" id="resultTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="table-tab" data-bs-toggle="tab" data-bs-target="#table-view" 
+                                    type="button" role="tab" aria-controls="table-view" aria-selected="true">Table View</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="raw-tab" data-bs-toggle="tab" data-bs-target="#raw-view" 
+                                    type="button" role="tab" aria-controls="raw-view" aria-selected="false">Raw JSON</button>
+                            </li>
+                        </ul>
+                        <div class="tab-content mt-2" id="resultTabContent">
+                            <div class="tab-pane fade show active" id="table-view" role="tabpanel" aria-labelledby="table-tab">
+                                <!-- Receipt summary table -->
+                                {% if results %}
+                                    <!-- Simplified primary data table -->
+                                    <div class="card mb-3">
+                                        <div class="card-header bg-light">
+                                            <h6 class="mb-0">Receipt Data</h6>
+                                        </div>
+                                        <div class="card-body p-0">
+                                            <table class="table table-striped table-hover mb-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th style="width: 30%">Field</th>
+                                                        <th>Value</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% if results.fields %}
+                                                        {% for field_name, field_value in results.fields.items() %}
+                                                            {% if field_name != "Items" and field_name != "TaxDetails" %}
+                                                                <tr>
+                                                                    <th>{{ field_name }}</th>
+                                                                    <td>
+                                                                        {% if field_value is mapping %}
+                                                                            {% if field_value.valueString is defined %}
+                                                                                {{ field_value.valueString }}
+                                                                            {% elif field_value.valueNumber is defined %}
+                                                                                {{ field_value.valueNumber }}
+                                                                            {% elif field_value.valueDate is defined %}
+                                                                                {{ field_value.valueDate }}
+                                                                            {% elif field_value.valueBoolean is defined %}
+                                                                                {{ field_value.valueBoolean }}
+                                                                            {% else %}
+                                                                                {{ field_value | tojson }}
+                                                                            {% endif %}
+                                                                        {% else %}
+                                                                            {{ field_value | tojson }}
+                                                                        {% endif %}
+                                                                    </td>
+                                                                </tr>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    {% else %}
+                                                        {% for field_name, field_value in results.items() %}
+                                                            {% if field_name != "fields" and field_name != "Items" and field_name != "TaxDetails" %}
+                                                                <tr>
+                                                                    <th>{{ field_name }}</th>
+                                                                    <td>{{ field_value | tojson }}</td>
+                                                                </tr>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    {% endif %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Items table - with improved display -->
+                                    {% if results.fields and results.fields.Items and results.fields.Items.valueArray %}
+                                    <div class="card mt-3">
+                                        <div class="card-header bg-light">
+                                            <h6 class="mb-0">Purchased Items</h6>
+                                        </div>
+                                        <div class="card-body p-0">
+                                            <div class="table-responsive">
+                                                <table class="table table-striped table-hover mb-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Description</th>
+                                                            <th>Quantity</th>
+                                                            <th>Unit Price</th>
+                                                            <th>Total Price</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for item in results.fields.Items.valueArray %}
+                                                        <tr>
+                                                            <td>{{ item.valueObject.Description.valueString if item.valueObject.Description else 'N/A' }}</td>
+                                                            <td>{{ item.valueObject.Quantity.valueNumber if item.valueObject.Quantity else '1' }}</td>
+                                                            <td>{{ item.valueObject.UnitPrice.valueNumber if item.valueObject.UnitPrice else 'N/A' }}</td>
+                                                            <td>{{ item.valueObject.TotalPrice.valueNumber if item.valueObject.TotalPrice else 'N/A' }}</td>
+                                                        </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <!-- Tax Details table -->
+                                    {% if results.fields and results.fields.TaxDetails and results.fields.TaxDetails.valueArray %}
+                                    <div class="card mt-3">
+                                        <div class="card-header bg-light">
+                                            <h6 class="mb-0">Tax Details</h6>
+                                        </div>
+                                        <div class="card-body p-0">
+                                            <div class="table-responsive">
+                                                <table class="table table-striped table-hover mb-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Tax Name</th>
+                                                            <th>Tax Rate</th>
+                                                            <th>Tax Amount</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for tax in results.fields.TaxDetails.valueArray %}
+                                                        <tr>
+                                                            <td>{{ tax.valueObject.Category.valueString if tax.valueObject.Category else 'Sales Tax' }}</td>
+                                                            <td>{{ tax.valueObject.Rate.valueNumber|string + '%' if tax.valueObject.Rate else 'N/A' }}</td>
+                                                            <td>{{ tax.valueObject.Amount.valueNumber if tax.valueObject.Amount else 'N/A' }}</td>
+                                                        </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                {% else %}
+                                    <div class="alert alert-warning">
+                                        No structured receipt data could be extracted. See raw JSON for details.
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="tab-pane fade" id="raw-view" role="tabpanel" aria-labelledby="raw-tab">
+                                <pre id="jsonResults">{{ results | tojson(indent=2) }}</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Show loading indicator when form is submitted
+        document.getElementById('uploadForm').addEventListener('submit', function() {
+            document.getElementById('loadingIndicator').style.display = 'block';
+        });
+
+        // Handle sample receipt selection
+        const sampleReceipts = document.querySelectorAll('.sample-receipt');
+        sampleReceipts.forEach(function(receipt) {
+            receipt.addEventListener('click', function() {
+                const receiptName = this.getAttribute('data-receipt');
+                window.location.href = '/analyze-sample/' + receiptName;
+                document.getElementById('loadingIndicator').style.display = 'block';
+            });
+        });
+    });
+</script>
+{% endblock %}
